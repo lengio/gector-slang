@@ -213,6 +213,10 @@ def get_weights_name(transformer_name, lowercase):
         return 'xlnet-base-cased'
     if transformer_name == 'xlnet-large':
         return 'xlnet-large-cased'
+    if transformer_name == 'deberta':
+        return 'microsoft/deberta-base'
+    if transformer_name == 'deberta-large':
+        return 'microsoft/deberta-large'
 
 
 def remove_double_tokens(sent):

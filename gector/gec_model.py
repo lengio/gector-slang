@@ -70,7 +70,7 @@ class GecBERTModel(object):
             else:
                 model.load_state_dict(torch.load(model_path,
                                                  map_location=torch.device('cpu')),
-                                                 strict=False)
+                                      strict=False)
             model.eval()
             self.models.append(model)
 
@@ -187,11 +187,12 @@ class GecBERTModel(object):
         return batches
 
     def _convert(self, data):
+        weight_sum = sum(self.model_weights)
         all_class_probs = torch.zeros_like(data[0]['class_probabilities_labels'])
         error_probs = torch.zeros_like(data[0]['max_error_probability'])
         for output, weight in zip(data, self.model_weights):
-            all_class_probs += weight * output['class_probabilities_labels'] / sum(self.model_weights)
-            error_probs += weight * output['max_error_probability'] / sum(self.model_weights)
+            all_class_probs += weight * output['class_probabilities_labels'] / weight_sum
+            error_probs += weight * output['max_error_probability'] / weight_sum
 
         max_vals = torch.max(all_class_probs, dim=-1)
         probs = max_vals[0].tolist()
@@ -285,7 +286,7 @@ class GecBERTModel(object):
             pred_batch = self.postprocess_batch(orig_batch, probabilities,
                                                 idxs, error_probs)
             if self.log:
-                print(f"Iteration {n_iter + 1}. Predicted {round(100*len(pred_ids)/batch_size, 1)}% of sentences.")
+                print(f"Iteration {n_iter + 1}. Predicted {round(100 * len(pred_ids) / batch_size, 1)}% of sentences.")
 
             final_batch, pred_ids, cnt = \
                 self.update_final_batch(final_batch, pred_ids, pred_batch,
@@ -296,3 +297,18 @@ class GecBERTModel(object):
                 break
 
         return final_batch, total_updates
+
+    def get_tags(self, full_batch):
+        final_batch = full_batch[:]
+        short_ids = [i for i in range(len(full_batch))
+                     if len(full_batch[i]) < self.min_len]
+        pred_ids = [i for i in range(len(full_batch)) if i not in short_ids]
+
+        orig_batch = [final_batch[i] for i in pred_ids]
+
+        sequences = self.preprocess(orig_batch)
+
+        probabilities, idxs, error_probs = self.predict(sequences)
+
+        return probabilities, [[self.vocab.get_token_from_index(i, 'labels') for i in idx] for idx in
+                               idxs], error_probs
