@@ -1,15 +1,13 @@
-from math import ceil
+
 from typing import List
 
-import numpy as np
-from tqdm import tqdm
-from transformers import AutoTokenizer
+from matplotlib.lines import Line2D
+from matplotlib.patches import Patch
+
 
 from gector.gec_model import GecBERTModel
 import pandas as pd
 from matplotlib import pylab as plt
-
-from sentence_correctness_model import SentenceCorrectnessT5, base_model_name
 
 
 # %%
@@ -83,22 +81,37 @@ colors = ['red' if x else 'blue' for x in df.incorrect.values]
 # %%
 plt.scatter(df.error_probabilities, df.corrected, c=colors, marker="+")
 plt.plot([a, b], [1, 0], '-g')
+plt.xlabel('Error probability')
+plt.ylabel('Tagged with correction')
+legend_elements = [Line2D([0], [0], color='g', label='Prediction threshold'),
+                   Line2D([0], [0], marker='o', color='w', label='true-grammatical',
+                          markerfacecolor='b'),
+                   Line2D([0], [0], marker='o', color='w', label='true-ungrammatical',
+                          markerfacecolor='r'),
+                   ]
+
+plt.legend(handles=legend_elements)
+x=[
+    Line2D([0], [0], color='w', label='classification line', markerfacecolor='g'),
+    Line2D([0], [0], marker='+', color='w', label='grammatically incorrect', markerfacecolor='r'),
+    Line2D([0], [0], marker='+', color='w', label='grammatically correct', markerfacecolor='b'),
+]
 plt.show()
 # %%
 
 df['prediction'] = (df.error_probabilities + (b - a) * df.corrected - b) > 0
-
+# %%
 print(f'incorrect: {df.incorrect.value_counts()[True]}')
 print(f'correct: {df.incorrect.value_counts()[False]}')
 print(f'false positives: {(~df.incorrect & df.prediction).value_counts()[True]}')
 print(f'false negative: {(df.incorrect & ~df.prediction).value_counts()[True]}')
-#%%
+# %%
 df.to_csv('examples/test.csv')
 
 # %%
 
 df = pd.read_csv('examples/test.csv')
-#%%
+# %%
 print(f'incorrect: {df.incorrect.value_counts()[True]}')
 print(f'correct: {df.incorrect.value_counts()[False]}')
 print(f'false positives: {(~df.incorrect & df.corrected).value_counts()[True]}')
